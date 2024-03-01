@@ -11,16 +11,20 @@ export async function userRoutes(app: FastifyInstance) {
 		return users;
 	});
 
-	app.get('/:id', async (request, _reply) => {
+	app.get('/:id', async (request, reply) => {
 		const getUserSchema = z.object({
 			id: z.string().uuid(),
 		});
 
 		const { id } = getUserSchema.parse(request.params);
 
-		const { name, email } = await knex('users').where('id', id).first();
+		const user = await knex('users').where('id', id).first();
 
-		return { id, name, email };
+		if (!user) {
+			return reply.status(404).send({ error: 'User not found' });
+		}
+
+		return { id, name: user.name, email: user.email };
 	});
 
 	app.post('/create', async (request, reply) => {
@@ -114,7 +118,7 @@ export async function userRoutes(app: FastifyInstance) {
 
 		if (!sessionUser) {
 			sessionUser = user.id;
-			reply.setCookie('sessionUser', sessionUser, {
+			reply.setCookie('sessionUser', sessionUser as string, {
 				path: '/',
 				maxAge: 60 * 60 * 24 * 7, // 7 days
 			});
